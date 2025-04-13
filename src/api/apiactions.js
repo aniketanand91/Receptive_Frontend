@@ -1,8 +1,8 @@
 import axios, { Axios, AxiosError, AxiosResponse } from "axios"
 import { requestInterceptor, responseInterceptorSuccess, responseInterceptor } from "./interceptor";
 import { sanitizeQueryParams } from "../Utils/commonutilities";
-axios.defaults.baseURL = "http://localhost:3000";
-export const API_BASE_URL = 'http://localhost:3000';
+axios.defaults.baseURL = "https://receptive.co.in/api";
+export const API_BASE_URL = 'https://receptive.co.in/api';
 
 axios.interceptors.request.use(
     requestInterceptor
