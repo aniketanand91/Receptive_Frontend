@@ -1,0 +1,11 @@
+:root {
+    --background-color: #ffffff; /* bg-gray-900 */
+    --card-background: #ffffff; /* bg-gray-800 */
+    --text-color: black; /* text-white */
+    --subtext-color: #a0aec0; /* text-gray-400 */
+    --highlight-color: #ecc94b; /* text-yellow-400 */
+    --button-bg: #805ad5; /* bg-purple-600 */
+    --discount-color: #f56565; /* text-red-400 */
+    --line-through-color: #718096; /* line-through price color */
+  }
+  
