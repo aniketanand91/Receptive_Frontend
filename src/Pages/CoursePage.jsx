@@ -5,6 +5,7 @@ import Loader from "../component/Loader"; // Import the Loader component
 import { getLocalStorage } from '../Utils/storageutility';
 import { accessTokenKey } from "../constants/storageconstants";
 import { API_BASE_URL } from '../api/apiactions';
+import { Link } from 'react-router-dom';
 
 
 const CoursePage = () => {
@@ -158,17 +159,19 @@ const CoursePage = () => {
           ))}
         </div>
 
-        <button
-          className={`mt-6 w-full px-4 py-2 text-white font-medium rounded-lg ${
-            isCourseCompleted
-              ? 'bg-green-500 hover:bg-green-600'
-              : 'bg-gray-400 cursor-not-allowed'
-          }`}
-          onClick={handleCourseCompleted}
-          disabled={!isCourseCompleted}
-        >
-          Course Completed
-        </button>
+        <Link to={`/projectsubmission/${courseId}`}>
+          <button
+            className={`mt-6 w-full px-4 py-2 text-white font-medium rounded-lg ${
+              isCourseCompleted
+                ? 'bg-green-500 hover:bg-green-600'
+                : 'bg-gray-400 cursor-not-allowed'
+            }`}
+            onClick={handleCourseCompleted}
+            disabled={!isCourseCompleted}
+          >
+            Course Completed
+          </button>
+        </Link>
       </div>
     </div>
   );

@@ -139,6 +139,19 @@ const Header = () => {
                     </li>
                   )}
 
+                  {(role === 'admin' || role === 'superadmin') && (
+                    <li
+                      onClick={() => {
+                        console.log('Navigating to Project Submissions (Admin/Superadmin)');
+                        setDropdownOpen(false);
+                        navigate('/SubmittedProjects');
+                      }}
+                      className="hover:bg-gray-100 px-4 py-2 cursor-pointer"
+                    >
+                      Project Submissions
+                    </li>
+                  )}
+
                   <li
                     onClick={handleLogout}
                     className="hover:bg-gray-100 px-4 py-2 cursor-pointer"

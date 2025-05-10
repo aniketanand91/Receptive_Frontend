@@ -3,6 +3,7 @@ import axios from 'axios';
 import { accessTokenKey } from '../constants/storageconstants';
 import { getLocalStorage } from '../Utils/storageutility';
 import { Link } from 'react-router-dom';
+import { API_BASE_URL } from "../api/apiactions";
 
 
 function Button({ children, variant = 'default', className = '', ...props }) {
@@ -31,7 +32,7 @@ export default function RequestApproval() {
     const fetchCourses = async () => {
       try {
         const token = getLocalStorage(accessTokenKey);
-        const response = await axios.get('http://localhost:3000/api/admin/courses', {
+        const response = await axios.get(`${API_BASE_URL}/api/admin/courses`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCourses(response.data?.data || []);

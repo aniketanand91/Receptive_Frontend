@@ -1,11 +1,51 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { API_BASE_URL } from '../api/apiactions';
-import { useSelector, useDispatch, shallowEqual } from 'react-redux';
+import { useSelector, shallowEqual } from 'react-redux';
+import { getLocalStorage } from "../Utils/storageutility";
+import { accessTokenKey } from "../constants/storageconstants";
+import { useNavigate, useParams } from 'react-router-dom';
 
 const ProjectSubmissionPage = () => {
   const [googleDriveLink, setGoogleDriveLink] = useState("");
   const [submissionStatus, setSubmissionStatus] = useState("Not Submitted");
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const { loginResp } = useSelector(({ auth }) => ({ loginResp: auth.loginResp }), shallowEqual);
+
+  const userId = loginResp?.userInfo?.user_ID || 'NA';
+  const { courseId } = useParams();
+  
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      const token = getLocalStorage(accessTokenKey);
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/getProjectSubmissionDetails`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            course_id: courseId,
+            user_id: userId
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.length > 0) {
+            setSubmissionStatus(data[0].status);
+            setIsSubmitted(true);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch submission status:", error);
+      }
+    };
+
+    fetchStatus();
+  }, [courseId, userId]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -15,21 +55,23 @@ const ProjectSubmissionPage = () => {
     }
 
     try {
-      // Send the POST request
+      const token = getLocalStorage(accessTokenKey);
       const response = await fetch(`${API_BASE_URL}/users/ProjectSubmission`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
-          user_id: loginResp?.userInfo?.user_ID || 'NA', // Replace with dynamic user ID if needed
+          user_id: userId,
           link: googleDriveLink,
+          course_id: courseId
         }),
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setSubmissionStatus("Waiting for Evaluation");
+        setSubmissionStatus("Under Review");
+        setIsSubmitted(true);
         alert("Project submitted successfully!");
       } else {
         const errorData = await response.json();
@@ -41,38 +83,42 @@ const ProjectSubmissionPage = () => {
       setSubmissionStatus("Submission Failed");
     }
 
-    setGoogleDriveLink(""); // Clear the input field
+    setGoogleDriveLink("");
   };
 
   return (
     <div style={styles.container}>
       <h1 style={styles.containerh1}>Project Submission</h1>
 
-      {/* Assignment Details */}
       <div style={styles.assignmentDetails}>
-        <h2>Course: Business Basics</h2>
-        <h3>Assignment: Submit a documentation of concepts learned through this course in business aspects.</h3>
+        <h3>Assignment: Submit a documentation of concepts learned through this course.</h3>
       </div>
 
-      {/* Submission Form */}
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <label htmlFor="googleDriveLink" style={styles.label}>
-          Google Drive Link:
-        </label>
-        <input
-          type="url"
-          id="googleDriveLink"
-          name="googleDriveLink"
-          placeholder="https://drive.google.com/your-link"
-          value={googleDriveLink}
-          onChange={(e) => setGoogleDriveLink(e.target.value)}
-          required
-          style={styles.input}
-        />
-        <button type="submit" style={styles.button}>
-          Submit
-        </button>
-      </form>
+      {/* Conditionally render submission form */}
+      {!isSubmitted || submissionStatus === "Rejected" ? (
+        <form onSubmit={handleSubmit} style={styles.form}>
+          <label htmlFor="googleDriveLink" style={styles.label}>
+            Google Drive Link:
+          </label>
+          <input
+            type="url"
+            id="googleDriveLink"
+            name="googleDriveLink"
+            placeholder="https://drive.google.com/your-link"
+            value={googleDriveLink}
+            onChange={(e) => setGoogleDriveLink(e.target.value)}
+            required
+            style={styles.input}
+          />
+          <button type="submit" style={styles.button}>
+            Submit
+          </button>
+        </form>
+      ) : (
+        <p style={{ color: '#888', fontStyle: 'italic' }}>
+          You have already submitted your project. Status: {submissionStatus}
+        </p>
+      )}
 
       {/* Submission Status */}
       <div style={styles.status}>

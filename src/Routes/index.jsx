@@ -18,6 +18,8 @@ const Policies = lazy(() => import('../Pages/privacypolicy'));
 const ProjectSub = lazy(() => import('../Pages/ProjectSubmissionPage'));
 const AddVideos = lazy(() => import('../Pages/addVideos'));
 const RequestApproval = lazy(() => import('../Pages/RequestApproval'));
+const SubmittedProjects = lazy(() => import('../Pages/SubmittedProjects'));
+
 
 const AppRoutes = () => {
   return (
@@ -35,9 +37,10 @@ const AppRoutes = () => {
         <Route path='aboutus' element={<AboutUs/>} />
         <Route path='tandc' element={<TandC/>} />
         <Route path='policies' element={<Policies/>}/>
-        <Route path='projectsubmission' element={<ProjectSub/>}/>
+        <Route path='projectsubmission/:courseId' element={<ProjectSub/>}/>
         <Route path='addvideos' element={<AddVideos/>} />
         <Route path='requestapproval' element={<RequestApproval/>} />
+        <Route path='submittedprojects' element={<SubmittedProjects/>}/>
         </Routes>
     </Suspense>
    

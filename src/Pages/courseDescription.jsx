@@ -44,19 +44,22 @@ const CourseDescription = () => {
   const handleBuyNow = async () => {
     setLoading(true);
     const token = getLocalStorage(accessTokenKey);
-
+  
     if (!token) {
-      toast.error("You need to log in to apply a coupon.");
+      toast.error("You need to log in to buy a course.");
       navigate("/signup");
+      setLoading(false);
       return;
     }
-
+  
     if (!course) {
       toast.error("Course details not found!");
+      setLoading(false);
       return;
     }
-
+  
     try {
+      // 1. Initiate Payment: get order_id and details from server
       const response = await axios.post(
         `${API_BASE_URL}/payment/initiate-payment`,
         {
@@ -70,31 +73,39 @@ const CourseDescription = () => {
           },
         }
       );
-
+  
       const paymentData = response.data;
-
+  
+      // 2. Configure Razorpay options
       const options = {
-        key: paymentData.key,
+        key: paymentData.key, // Razorpay Key ID (public)
         amount: paymentData.amount,
         currency: paymentData.currency,
         name: paymentData.name,
         description: paymentData.description,
         image: paymentData.image,
-        order_id: paymentData.order_id,
-        callback_url: paymentData.callback_url,
+        order_id: paymentData.order_id, // Important: order_id from your server
         prefill: paymentData.prefill,
         theme: paymentData.theme,
+        modal: {
+          ondismiss: function () {
+            console.log("Payment popup closed.");
+          },
+        },
         handler: function (paymentResponse) {
+          // 3. Razorpay payment success handler
           let attempts = 0;
           const maxAttempts = 3;
-          const delay = 2000;
-
+          const delay = 2000; // 2 seconds
+  
           const verifyPayment = async () => {
             try {
               const verifyResponse = await axios.post(
                 `${API_BASE_URL}/payment/verify`,
                 {
-                  "razorpay_order_id": paymentResponse.razorpay_payment_id
+                  razorpay_order_id: paymentData.order_id,
+                  razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                  razorpay_signature: paymentResponse.razorpay_signature,
                 },
                 {
                   headers: {
@@ -102,9 +113,9 @@ const CourseDescription = () => {
                   },
                 }
               );
-
+  
               if (verifyResponse.status === 200 && verifyResponse.data.paymentStatus === "success") {
-                toast.success("Payment verified! Redirecting to your courses...");
+                toast.success("Payment verified! Redirecting...");
                 setTimeout(() => navigate("/mycourses"), 3000);
               } else {
                 throw new Error("Verification failed");
@@ -118,19 +129,16 @@ const CourseDescription = () => {
               }
             }
           };
-
+  
           verifyPayment();
         },
-        modal: {
-          ondismiss: function () {
-            console.log("Payment modal dismissed.");
-          },
-        },
       };
-
+  
+      // 4. Open Razorpay payment popup
       const razorpay = new window.Razorpay(options);
       razorpay.open();
     } catch (error) {
+      // 5. Error handling
       if (error.response && error.response.status === 401) {
         toast.error("Session expired. Please log in again.");
         removeLocalStorage(accessTokenKey);
