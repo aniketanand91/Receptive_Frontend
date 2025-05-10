@@ -52,7 +52,7 @@ export default function RequestApproval() {
     const payload = { course_id: courseId, is_live: newStatus };
 
     try {
-      await axios.post('http://localhost:3000/api/approve-course', payload, {
+      await axios.post(`${API_BASE_URL}/api/approve-course`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
