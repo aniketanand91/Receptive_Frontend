@@ -112,7 +112,7 @@ const AddVideos = () => {
               {/* Course Dropdown */}
               <div>
                 <label htmlFor="course_id" className="block text-sm font-medium text-gray-700">
-                  Course Title
+                  Choose your Course Title
                 </label>
                 <Field
                   as="select"
@@ -157,13 +157,13 @@ const AddVideos = () => {
               {/* Description */}
               <div>
                 <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                  Description
+                  Lecture Title
                 </label>
                 <Field
                   type="text"
                   name="description"
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="Enter video description"
+                  placeholder="Enter lecture title name"
                 />
                 <ErrorMessage
                   name="description"

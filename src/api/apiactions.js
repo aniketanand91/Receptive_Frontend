@@ -4,6 +4,10 @@ import { sanitizeQueryParams } from "../Utils/commonutilities";
 axios.defaults.baseURL = 'https://receptive.co.in/api';
 export const API_BASE_URL = 'https://receptive.co.in/api';
 
+// axios.defaults.baseURL = 'http://localhost:3000';
+// export const API_BASE_URL = 'http://localhost:3000';
+
+
 axios.interceptors.request.use(
     requestInterceptor
 )

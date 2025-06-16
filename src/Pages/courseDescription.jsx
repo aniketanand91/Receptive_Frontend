@@ -13,9 +13,12 @@ const CourseDescription = () => {
   const { courseId } = useParams();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showFullDescription, setShowFullDescription] = useState(false);
   const [coupon, setCoupon] = useState('');
   const [couponData, setcopounData] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [reviews, setReviews] = useState([]);
+
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -41,25 +44,41 @@ const CourseDescription = () => {
     fetchCourseDetails();
   }, [courseId]);
 
+  useEffect(() => {
+    const fetchCourseReviews = async () => {
+      try {
+        const response = await axios.post(`${API_BASE_URL}/videos/getReviews`, { course_id: courseId });
+        if (response.data.success) {
+          setReviews(response.data.data);
+        } else {
+          console.error("Failed to fetch reviews:", response.data.message);
+        }
+      } catch (error) {
+        console.error("Error fetching reviews:", error);
+      }
+    };
+
+    fetchCourseReviews();
+  }, [courseId]);
+
   const handleBuyNow = async () => {
     setLoading(true);
     const token = getLocalStorage(accessTokenKey);
-  
+
     if (!token) {
       toast.error("You need to log in to buy a course.");
       navigate("/signup");
       setLoading(false);
       return;
     }
-  
+
     if (!course) {
       toast.error("Course details not found!");
       setLoading(false);
       return;
     }
-  
+
     try {
-      // 1. Initiate Payment: get order_id and details from server
       const response = await axios.post(
         `${API_BASE_URL}/payment/initiate-payment`,
         {
@@ -67,24 +86,19 @@ const CourseDescription = () => {
           courseId: course.course_id,
           couponCode: coupon !== "" ? coupon : 'NULL',
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-  
+
       const paymentData = response.data;
-  
-      // 2. Configure Razorpay options
+
       const options = {
-        key: paymentData.key, // Razorpay Key ID (public)
+        key: paymentData.key,
         amount: paymentData.amount,
         currency: paymentData.currency,
         name: paymentData.name,
         description: paymentData.description,
         image: paymentData.image,
-        order_id: paymentData.order_id, // Important: order_id from your server
+        order_id: paymentData.order_id,
         prefill: paymentData.prefill,
         theme: paymentData.theme,
         modal: {
@@ -93,11 +107,10 @@ const CourseDescription = () => {
           },
         },
         handler: function (paymentResponse) {
-          // 3. Razorpay payment success handler
           let attempts = 0;
           const maxAttempts = 3;
-          const delay = 2000; // 2 seconds
-  
+          const delay = 2000;
+
           const verifyPayment = async () => {
             try {
               const verifyResponse = await axios.post(
@@ -107,13 +120,9 @@ const CourseDescription = () => {
                   razorpay_payment_id: paymentResponse.razorpay_payment_id,
                   razorpay_signature: paymentResponse.razorpay_signature,
                 },
-                {
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                  },
-                }
+                { headers: { Authorization: `Bearer ${token}` } }
               );
-  
+
               if (verifyResponse.status === 200 && verifyResponse.data.paymentStatus === "success") {
                 toast.success("Payment verified! Redirecting...");
                 setTimeout(() => navigate("/mycourses"), 3000);
@@ -129,16 +138,14 @@ const CourseDescription = () => {
               }
             }
           };
-  
+
           verifyPayment();
         },
       };
-  
-      // 4. Open Razorpay payment popup
+
       const razorpay = new window.Razorpay(options);
       razorpay.open();
     } catch (error) {
-      // 5. Error handling
       if (error.response && error.response.status === 401) {
         toast.error("Session expired. Please log in again.");
         removeLocalStorage(accessTokenKey);
@@ -175,11 +182,7 @@ const CourseDescription = () => {
           couponCode: coupon,
           amount: course.price,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.data.success) {
@@ -200,18 +203,60 @@ const CourseDescription = () => {
     }
   };
 
-  if (loading) return <Loader />;
+  const handleShareCourse = () => {
+    const courseUrl = `${window.location.origin}/courses/${courseId}`;
+    if (navigator.share) {
+      navigator.share({
+        title: course.title,
+        url: courseUrl,
+      }).catch((err) => console.log("Error sharing:", err));
+    } else {
+      const message = `Check out this amazing course: ${course.title}\n${courseUrl}`;
+      const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
+      window.open(shareUrl, "_blank");
+    }
+  };
 
+  const handlePreviewClick = (url) => {
+    setPreviewUrl(url);
+    setShowModal(true);
+  };
+
+  if (loading) return <Loader />;
   if (!course) return <div>Course details not found!</div>;
 
   return (
     <div className="bg-gray-100">
       <ToastContainer position="top-right" autoClose={3000} theme="colored" />
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-11/12 max-w-3xl relative">
+            <button
+              onClick={() => setShowModal(false)}
+              className="absolute top-2 right-2 text-gray-700 text-xl hover:text-red-600"
+            >
+              ✖
+            </button>
+            <div className="p-4">
+              <iframe
+                className="w-full h-[400px] rounded-lg"
+                src={previewUrl}
+                title="Preview Video"
+                allowFullScreen
+              ></iframe>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-gray-900 text-white py-16">
         <div className="max-w-screen-xl mx-auto px-8 lg:px-16 flex flex-col md:flex-row justify-start items-start">
           <div className="flex-1 pr-8">
             <h1 className="text-4xl md:text-5xl font-bold mb-8">{course.title}</h1>
-            <p className="text-lg mb-4">{showFullDescription ? course.description : course.description}</p>
+            <p className="text-lg mb-4">{course.description}</p>
+            <p className="text-yellow-400 text-lg font-semibold mb-4">Rating: ⭐ {parseFloat(course.average_rating).toFixed(1)} / 5</p>
+            <p className="text-sm text-gray-400 mb-4">Access to this course is available for 90 days from the date of purchase.*</p>
             <p className="text-sm text-gray-400 mb-4">Last updated on {new Date(course.updatedAt).toLocaleDateString()}</p>
           </div>
           <div className="w-full md:w-1/2 lg:w-1/3 bg-white shadow-lg rounded-lg p-6 mt-8 md:mt-0">
@@ -237,6 +282,9 @@ const CourseDescription = () => {
             <button className="mt-8 w-full py-3 bg-blue-600 text-white rounded-lg" onClick={handleBuyNow}>
               Buy Now
             </button>
+            <button className="mt-4 w-full py-3 bg-green-600 text-white rounded-lg" onClick={handleShareCourse}>
+              Share the Course
+            </button>
           </div>
         </div>
       </div>
@@ -253,6 +301,78 @@ const CourseDescription = () => {
               <li>Basic business understanding required</li>
             </ul>
           </div>
+        </div>
+
+        <div className="mt-12">
+          <h2 className="text-3xl font-bold mb-4">Content</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
+              <thead className="bg-gray-200 text-gray-700">
+                <tr>
+                  <th className="text-left px-6 py-3">Lecture No.</th>
+                  <th className="text-left px-6 py-3">Lecture Title</th>
+                  <th className="text-left px-6 py-3">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {course.videos && course.videos.length > 0 ? (
+                  course.videos.map((video, index) => (
+                    <tr key={video.position} className="border-b">
+                      <td className="px-6 py-4">{index + 1}</td>
+                      <td className="px-6 py-4">{video.video_description}</td>
+                      <td className="px-6 py-4">
+                        {video.position === 0 ? (
+                          <button
+                            onClick={() => handlePreviewClick(video.video_url)}
+                            className="text-blue-600 underline hover:text-blue-800 transition"
+                          >
+                            Preview
+                          </button>
+                        ) : (
+                          <span className="text-gray-500 text-xl">🔒</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td className="px-6 py-4" colSpan="3">No videos available.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="mt-12">
+          <h2 className="text-3xl font-bold mb-6">Course Reviews</h2>
+          {reviews.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {reviews.map((review) => (
+                <div key={review.review_id} className="bg-white p-4 rounded-2xl shadow hover:shadow-lg transition-shadow duration-300">
+                  <div className="mb-2">
+                    <span className="text-gray-800 font-medium">{review.user_name}</span>
+                    <div className="flex mt-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <span
+                          key={star}
+                          className={star <= review.rating ? "text-yellow-400 text-xl" : "text-gray-300 text-xl"}
+                        >
+                          ★
+                        </span>
+                      ))}
+                      {/* <span className="ml-2 text-gray-700">({parseFloat(review.rating).toFixed(1)} / 5)</span> */}
+                    </div>
+                  </div>
+                  <p className="text-gray-600 text-sm">{review.review}</p>
+                  <p className="text-xs text-gray-400 mt-2">{new Date(review.created_at).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-600">No reviews available for this course.</p>
+          )}
         </div>
       </div>
     </div>

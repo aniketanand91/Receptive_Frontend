@@ -6,16 +6,11 @@ import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import axios from 'axios';
 import poster from '../Utils/poster.png';
-import Loader from "../component/Loader"; // Updated import
+import Loader from "../component/Loader";
 import { API_BASE_URL } from '../api/apiactions';
+import { Share2 } from 'lucide-react'; // Modern icon
 
-// const banners = [
-//   { id: 1, image: poster, text: "ASPIRE TO LEARN AND GROW" }
-// ];
-
-const banners = [
-  { id: 1, image: poster}
-];
+const banners = [{ id: 1, image: poster }];
 
 const sliderSettings = {
   dots: true,
@@ -69,7 +64,7 @@ function Home() {
     <div className="min-h-screen bg-white">
       {loading ? (
         <div className="flex items-center justify-center h-screen">
-          <Loader /> {/* Updated loader usage */}
+          <Loader />
         </div>
       ) : (
         <>
@@ -78,15 +73,15 @@ function Home() {
             <Slider {...sliderSettings}>
               {banners.map((banner) => (
                 <div
-                key={banner.id}
-                className="relative shadow-md hover:shadow-lg transition-shadow duration-300"
-              >
-                <img
-                  src={banner.image}
-                  alt={`Banner ${banner.id}`}
-                  className="w-full object-cover  border-b border-gray-200"
-                />
-              </div>
+                  key={banner.id}
+                  className="relative shadow-md hover:shadow-lg transition-shadow duration-300"
+                >
+                  <img
+                    src={banner.image}
+                    alt={`Banner ${banner.id}`}
+                    className="w-full object-cover border-b border-gray-200"
+                  />
+                </div>
               ))}
             </Slider>
           </section>
@@ -95,12 +90,12 @@ function Home() {
           <section className="text-center py-12 px-6 bg-white">
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-1000">Welcome to Our Learning Platform</h1>
             <p className="text-lg text-gray-600 mt-4 max-w-2xl mx-auto">
-            Start your learning journey today and unlock new skills to boost your career growth.
+              Start your learning journey today and unlock new skills to boost your career growth.
             </p>
           </section>
 
           {/* Categories Section */}
-          <section className="container mx-auto px-4 bg-white ">
+          <section className="container mx-auto px-4 bg-white">
             <h2 className="text-3xl font-semibold text-gray-1000 mb-6">Browse Categories</h2>
             <div className="flex flex-wrap justify-start gap-4">
               {categories.map((category) => (
@@ -119,10 +114,8 @@ function Home() {
             </div>
           </section>
 
-
           {/* Courses Section */}
           <section className="container mx-auto px-4 py-12">
-            {/* <h2 className="text-3xl font-semibold text-gray-700 mb-6">Featured Courses</h2> */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredCourses.length > 0 ? (
                 filteredCourses.map((course) => (
@@ -139,7 +132,31 @@ function Home() {
                     <div className="p-4">
                       <h3 className="text-lg font-bold text-black-800 line-clamp-2">{course.title}</h3>
                       <p className="text-sm text-gray-600 mt-2 line-clamp-3">{course.description}</p>
-                      <p className="text-black-400 font-bold mt-4">₹{course.price}</p>
+
+                      {/* Price and Share Button */}
+                      <div className="flex items-center justify-between mt-4">
+                        <p className="text-black-400 font-bold">₹{course.price}</p>
+
+                        <button
+                          className="flex items-center justify-center bg-green-600 hover:bg-green-700 text-white rounded-full w-9 h-9 transition"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const shareUrl = `${window.location.origin}/course/${course.course_id}`;
+                            if (navigator.share) {
+                              navigator.share({
+                                title: course.title,
+                                text: 'Check out this course on Receptive!',
+                                url: shareUrl,
+                              }).catch((err) => console.log('Sharing error:', err));
+                            } else {
+                              navigator.clipboard.writeText(shareUrl);
+                              alert('Course link copied! Share it with your friends.');
+                            }
+                          }}
+                        >
+                          <Share2 size={18} className="text-white" />
+                        </button>
+                      </div>
                     </div>
                   </Link>
                 ))

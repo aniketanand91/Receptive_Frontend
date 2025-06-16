@@ -19,6 +19,7 @@ const ProjectSub = lazy(() => import('../Pages/ProjectSubmissionPage'));
 const AddVideos = lazy(() => import('../Pages/addVideos'));
 const RequestApproval = lazy(() => import('../Pages/RequestApproval'));
 const SubmittedProjects = lazy(() => import('../Pages/SubmittedProjects'));
+const ForgotPassword = lazy(() => import('../Pages/ForgotPassword'));
 
 
 const AppRoutes = () => {
@@ -41,6 +42,8 @@ const AppRoutes = () => {
         <Route path='addvideos' element={<AddVideos/>} />
         <Route path='requestapproval' element={<RequestApproval/>} />
         <Route path='submittedprojects' element={<SubmittedProjects/>}/>
+        <Route path="forgot-password" element={<ForgotPassword />} />
+
         </Routes>
     </Suspense>
    
