@@ -11,6 +11,8 @@ const AddVideos = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [timeRemaining, setTimeRemaining] = useState(null);
 
   const token = getLocalStorage(accessTokenKey);
   const { loginResp } = useSelector(({ auth }) => ({ loginResp: auth.loginResp }), shallowEqual);
@@ -21,15 +23,9 @@ const AddVideos = () => {
       setError("");
 
       try {
-        const response = await axios.post(`${API_BASE_URL}/api/admin/courses/upload`, 
-          {
-            "userId": loginResp?.userInfo?.user_ID || 'NA' 
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+        const response = await axios.post(`${API_BASE_URL}/api/admin/courses/upload`,
+          { "userId": loginResp?.userInfo?.user_ID || 'NA' },
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         setCourses(response.data.data.courses || []);
       } catch (error) {
@@ -67,26 +63,73 @@ const AddVideos = () => {
 
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     setError("");
+    setUploadProgress(0);
+    setTimeRemaining(null);
 
     try {
-      const formData = new FormData();
-      formData.append("course_id", values.course_id);
-      formData.append("video", values.video_file);
-      formData.append("description", values.description);
-      formData.append("position", values.position);
-
-      await axios.post(`${API_BASE_URL}/api/multiplecourse`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
+      // 1. Get Pre-signed URL
+      const presignResp = await axios.post(`${API_BASE_URL}/api/getPresignedURL`, {
+        fileName: values.video_file.name,
+        fileType: "mp4",
+        course_id: values.course_id,
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      alert("Video added successfully!");
+      const { uploadURL } = presignResp.data;
+      const fullFileURL = uploadURL.split('?')[0]; // Get the S3 file URL without query params
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', uploadURL);
+      xhr.setRequestHeader('Content-Type', values.video_file.type);
+
+      let startTime = Date.now();
+
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const percentCompleted = Math.round((event.loaded * 100) / event.total);
+          setUploadProgress(percentCompleted);
+
+          const elapsedTime = (Date.now() - startTime) / 1000; // in seconds
+          const uploadSpeed = event.loaded / elapsedTime; // bytes per second
+          const remainingBytes = event.total - event.loaded;
+          const estimatedTime = remainingBytes / uploadSpeed; // in seconds
+
+          setTimeRemaining(estimatedTime.toFixed(1));
+        }
+      });
+
+      const uploadPromise = new Promise((resolve, reject) => {
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            resolve();
+          } else {
+            reject(new Error(`Upload failed with status: ${xhr.status}`));
+          }
+        };
+        xhr.onerror = () => reject(new Error('Upload failed due to a network error.'));
+      });
+
+      xhr.send(values.video_file);
+      await uploadPromise;
+
+      // 3. Save video metadata in backend
+      await axios.post(`${API_BASE_URL}/api/multiplecourse`, {
+        course_id: values.course_id,
+        description: values.description,
+        position: values.position,
+        fileUrl: fullFileURL, // Save the full S3 file URL
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      alert("Video uploaded successfully!");
       resetForm();
+      setUploadProgress(0);
+      setTimeRemaining(null);
     } catch (error) {
-      console.error("Error adding video:", error);
-      setError("Failed to add video. Please try again.");
+      console.error("Error uploading video:", error);
+      setError("Failed to upload video. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -106,9 +149,7 @@ const AddVideos = () => {
           onSubmit={handleSubmit}
         >
           {({ isSubmitting, setFieldValue }) => (
-            <Form
-              className={`space-y-4 ${isSubmitting ? "opacity-50 pointer-events-none" : ""}`}
-            >
+            <Form className={`space-y-4 ${isSubmitting ? "opacity-100" : ""}`}>
               {/* Course Dropdown */}
               <div>
                 <label htmlFor="course_id" className="block text-sm font-medium text-gray-700">
@@ -126,11 +167,7 @@ const AddVideos = () => {
                     </option>
                   ))}
                 </Field>
-                <ErrorMessage
-                  name="course_id"
-                  component="div"
-                  className="text-red-500 text-sm mt-1"
-                />
+                <ErrorMessage name="course_id" component="div" className="text-red-500 text-sm mt-1" />
               </div>
 
               {/* Video File Upload */}
@@ -142,16 +179,10 @@ const AddVideos = () => {
                   type="file"
                   name="video_file"
                   accept="video/*"
-                  onChange={(event) => {
-                    setFieldValue("video_file", event.currentTarget.files[0]);
-                  }}
+                  onChange={(event) => setFieldValue("video_file", event.currentTarget.files[0])}
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
-                <ErrorMessage
-                  name="video_file"
-                  component="div"
-                  className="text-red-500 text-sm mt-1"
-                />
+                <ErrorMessage name="video_file" component="div" className="text-red-500 text-sm mt-1" />
               </div>
 
               {/* Description */}
@@ -165,11 +196,7 @@ const AddVideos = () => {
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="Enter lecture title name"
                 />
-                <ErrorMessage
-                  name="description"
-                  component="div"
-                  className="text-red-500 text-sm mt-1"
-                />
+                <ErrorMessage name="description" component="div" className="text-red-500 text-sm mt-1" />
               </div>
 
               {/* Position */}
@@ -181,14 +208,27 @@ const AddVideos = () => {
                   type="number"
                   name="position"
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="Enter video position [indexing start from: 0]"
+                  placeholder="Enter video position [indexing starts from: 0]"
                 />
-                <ErrorMessage
-                  name="position"
-                  component="div"
-                  className="text-red-500 text-sm mt-1"
-                />
+                <ErrorMessage name="position" component="div" className="text-red-500 text-sm mt-1" />
               </div>
+
+              {/* Upload Progress Bar */}
+              {isSubmitting && (
+                <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                  <div
+                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
+              )}
+
+              {/* Upload Info */}
+              {isSubmitting && (
+                <p className="text-center text-gray-600">
+                  Uploading... {uploadProgress}% {timeRemaining && `(ETA: ${timeRemaining} sec)`}
+                </p>
+              )}
 
               {/* Error Message */}
               {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -199,9 +239,7 @@ const AddVideos = () => {
                   type="submit"
                   disabled={isSubmitting}
                   className={`w-full py-2 px-4 rounded-md shadow-sm text-white flex justify-center items-center gap-2 ${
-                    isSubmitting
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-blue-500 hover:bg-blue-600"
+                    isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
                   }`}
                 >
                   {isSubmitting && (

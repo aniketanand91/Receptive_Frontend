@@ -86,7 +86,7 @@ const Signup = () => {
       setOtpSent(true);  // Set OTP sent to true
       // setOtpError('');
 
-      toast.success('OTP sent successfully!');
+      toast.success('OTP sent successfully to your mobile number!');
 
     } else {
       // setOtpError(res.data.message || 'Failed to send OTP');
@@ -111,8 +111,13 @@ const Signup = () => {
 
       if (res.status === 201) {
         setOtpVerified(true);
+        
         // setOtpError('');
-        toast.success('User account created successfully!');
+        toast.success('User account created successfully! Redirecting to home page');
+setTimeout(() => {
+  navigate('/home');
+}, 3000);
+        
       } else {
         setOtpVerified(false);
         // setOtpError(res.data.message || 'Invalid OTP');

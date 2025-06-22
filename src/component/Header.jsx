@@ -141,12 +141,15 @@ const Header = () => {
               {dropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg text-gray-700 z-50">
                   <ul>
-                    <li
-                      onClick={() => { navigate('/mycourses'); setDropdownOpen(false); }}
-                      className="hover:bg-gray-100 px-4 py-2 cursor-pointer"
-                    >
-                      My Courses
-                    </li>
+                                        {(role === 'user' || role === 'admin') && (
+                      <li
+                        onClick={() => { navigate('/mycourses'); setDropdownOpen(false); }}
+                        className="hover:bg-gray-100 px-4 py-2 cursor-pointer"
+                      >
+                        My Courses
+                      </li>
+                    )}
+
                     {role === 'superadmin' && (
                       <li
                         onClick={() => { navigate('/RequestApproval'); setDropdownOpen(false); }}
