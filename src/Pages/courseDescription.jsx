@@ -208,6 +208,7 @@ const CourseDescription = () => {
     if (navigator.share) {
       navigator.share({
         title: course.title,
+        text: 'Check out this course on Receptive!',
         url: courseUrl,
       }).catch((err) => console.log("Error sharing:", err));
     } else {
