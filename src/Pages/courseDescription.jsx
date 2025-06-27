@@ -204,7 +204,7 @@ const CourseDescription = () => {
   };
 
   const handleShareCourse = () => {
-    const courseUrl = `${window.location.origin}/courses/${courseId}`;
+    const courseUrl = `${window.location.origin}/course/${courseId}`;
     if (navigator.share) {
       navigator.share({
         title: course.title,
